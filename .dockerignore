@@ -1,0 +1,6 @@
+ecosystem.config.cjs
+.venv
+.env
+.git
+pruebas/salida
+__pycache__

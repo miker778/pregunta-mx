@@ -1,0 +1,10 @@
+FROM python:3.12-slim
+WORKDIR /app
+RUN pip install --no-cache-dir uv
+COPY pyproject.toml ./
+# Sin el extra "local": en Cloud Run no hay LiteLLM, los modelos son Gemini en Vertex AI.
+RUN uv pip install --system --no-cache -r pyproject.toml
+COPY agents/ ./agents/
+COPY app/ ./app/
+ENV PORT=8080 GOOGLE_GENAI_USE_VERTEXAI=TRUE TMX_MODO=vertex
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

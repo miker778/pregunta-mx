@@ -1,0 +1,16 @@
+[project]
+name = "tramites-mx"
+version = "0.1.0"
+description = "Pregunta MX: trámites de México en español claro, solo con fuentes oficiales (Google ADK)"
+requires-python = ">=3.12"
+dependencies = [
+    "google-adk==2.11.0",
+    "fastapi>=0.124",
+    "uvicorn>=0.40",
+    "httpx>=0.28",
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+# Solo para el modo gateway (servidor propio con LiteLLM). Cloud Run no lo instala.
+local = ["litellm==1.104.0"]
