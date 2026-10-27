@@ -174,24 +174,63 @@ def _buscador_vertex(ambito: str) -> LlmAgent:
         consultas = (ctx.state.get("plan", {}).get("consultas") or {}).get(ambito) or []
         if not consultas:
             return "No hay nada que buscar en este ámbito. Responde solo: (sin búsqueda)"
+        if ambito == "cdmx":
+            # Google devuelve páginas de otros estados si no se le fuerza el sitio.
+            consultas = [f"{c} Ciudad de México site:cdmx.gob.mx" for c in consultas]
         return (f"Busca con google_search, solo en sitios oficiales del gobierno de México ({sitios}), "
                 f"estas consultas: {consultas}. Resume en español lo que dicen las fuentes oficiales: requisitos, "
                 "pasos, costos con su año, dónde se hace y formularios. No uses blogs ni gestores.")
 
     return LlmAgent(name=f"buscador_{ambito}", model=config.modelo(), instruction=instruccion,
-                    tools=[google_search], after_model_callback=_guardar_grounding(ambito))
+                    tools=[google_search], after_model_callback=_guardar_grounding(ambito),
+                    include_contents="none")  # solo ve sus consultas: sin consultas no busca
+
+
+_ETIQUETAS = re.compile(r"<(script|style|noscript|svg|nav|footer|header)[^>]*>.*?</\1>", re.S | re.I)
+
+
+def _texto_html(html: str) -> str:
+    html = _ETIQUETAS.sub(" ", html)
+    texto = re.sub(r"<[^>]+>", " ", html)
+    texto = re.sub(r"&nbsp;|&#160;", " ", texto)
+    return re.sub(r"\s+", " ", texto).strip()
+
+
+async def _leer_pagina(cli: httpx.AsyncClient, f: dict) -> dict | None:
+    """Sigue la liga de Google hasta la página real, confirma que es oficial y toma su texto."""
+    try:
+        r = await cli.get(f["url"])
+        final = str(r.url)
+        if not es_oficial(final):
+            return None
+        texto = _texto_html(r.text[:400_000]) if "html" in r.headers.get("content-type", "") else ""
+        titulo = re.search(r"<title[^>]*>(.*?)</title>", r.text[:50_000], re.S | re.I)
+        return {**f, "url": final, "dominio": dominio(final),
+                "titulo": (titulo.group(1).strip() if titulo else f["titulo"])[:150],
+                "fragmento": (f.get("fragmento", "") + " " + texto[:1500]).strip()}
+    except Exception:
+        return {**f} if f.get("fragmento") else None
 
 
 class UnirGrounding(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
-        por_ambito = {}
+        candidatos = []
         for ambito in AMBITOS:
-            vistos, lista = set(), []
+            vistos = set()
             for f in ctx.session.state.get(f"grounding_{ambito}", []):
-                if es_oficial(f["dominio"]) and f["url"] not in vistos and len(lista) < POR_AMBITO:
+                if ambito == "cdmx" and not f["dominio"].endswith("cdmx.gob.mx"):
+                    continue  # en el ámbito CDMX, nada de otros estados
+                if es_oficial(f["dominio"]) and f["url"] not in vistos and len(vistos) < POR_AMBITO:
                     vistos.add(f["url"])
-                    lista.append(f)
-            por_ambito[ambito] = lista
+                    candidatos.append(f)
+        async with httpx.AsyncClient(timeout=5, follow_redirects=True,
+                                     headers={"User-Agent": "Mozilla/5.0 (PreguntaMX)"}) as cli:
+            leidas = await asyncio.gather(*[_leer_pagina(cli, f) for f in candidatos])
+        por_ambito, urls = {a: [] for a in AMBITOS}, set()
+        for f in leidas:
+            if f and f["url"] not in urls:
+                urls.add(f["url"])
+                por_ambito[f["ambito"]].append(f)
         yield Event(author=self.name, invocation_id=ctx.invocation_id,
                     actions=EventActions(state_delta={"fuentes": _numerar(por_ambito)}))
 
