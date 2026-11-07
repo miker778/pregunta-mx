@@ -6,7 +6,7 @@ Escribes lo que te está pasando, con tus palabras, y te contesta qué trámites
 dónde ir y cuánto cuesta. Cada dato lleva su liga a una fuente oficial (`*.gob.mx`). No pide cuenta ni CURP y no
 guarda nada.
 
-En vivo: https://mx.nostris.tech
+En vivo: https://mx.nostris.mx (modo `gateway`: DeepSeek por un gateway LiteLLM y búsqueda en SearXNG).
 
 No es un sitio del gobierno. Puede equivocarse: confirma en la fuente oficial. Orientación gratuita: Locatel
 55 5658 1111 (CDMX) o 079 (federal).
@@ -99,5 +99,5 @@ pruebas/una.sh "¿Cómo hago un amparo?"     # una pregunta, legible
 
 ## Licencia
 
-Código bajo [Apache 2.0](LICENSE). Hecho por ciudadanos, con [Nostris](https://nostris.tech), con Google ADK y
+Código bajo [Apache 2.0](LICENSE). Hecho por ciudadanos, con [Nostris](https://nostris.mx), con Google ADK y
 Claude Code.
