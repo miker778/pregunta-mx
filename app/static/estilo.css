@@ -19,6 +19,9 @@ a { color: var(--azul); }
 .barra { display: flex; justify-content: space-between; align-items: center; padding: 18px clamp(16px, 4vw, 48px); }
 .marca { font-weight: 600; color: var(--tinta); text-decoration: none; display: flex; gap: 8px; align-items: center; }
 .punto { width: 10px; height: 10px; border-radius: 50%; background: var(--verde); }
+.lado { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.por { font-size: 12px; color: var(--gris); opacity: .6; white-space: nowrap; }
+.por a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .etiqueta { font-size: 12px; color: var(--gris); border: 1px solid var(--linea); padding: 4px 10px; border-radius: 99px; }
 
 /* titular estilo America.gov */
